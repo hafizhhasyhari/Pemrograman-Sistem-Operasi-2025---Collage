@@ -1,0 +1,7 @@
+#!/bin/bash
+# Program Hello World sederhana
+
+echo "==============================="
+echo "Selamat datang di Praktikum Sistem Operasi 2025!"
+echo "Ini adalah program Hello World pertama Hafizh Hilman Asyhari."
+echo "==============================="
