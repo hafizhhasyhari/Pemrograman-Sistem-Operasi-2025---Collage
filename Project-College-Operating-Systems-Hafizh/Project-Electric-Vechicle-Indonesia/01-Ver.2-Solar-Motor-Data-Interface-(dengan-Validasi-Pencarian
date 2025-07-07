@@ -1,0 +1,111 @@
+#!/bin/bash
+# CLI Bash: Solar Motor Data Interface (dengan Validasi & Pencarian)
+# Nama : Hafizh Hilman Asyhari
+# Kelas : B
+# Undergraduate Student
+# Indonesia
+# 2025
+DB="motor_solar_energy.db"
+
+# Fungsi: Menampilkan Menu
+menu() {
+  echo "\n=== MENU UTAMA – SOLAR MOTOR SYSTEM ==="
+  echo "1. Tambah Motor Unit"
+  echo "2. Tambah Output Panel Surya"
+  echo "3. Lihat Data Motor Unit"
+  echo "4. Cari Motor Berdasarkan Nomor Seri"
+  echo "5. Hapus Motor Berdasarkan ID"
+  echo "6. Lihat Output Energi Hari Ini"
+  echo "7. Export Semua Tabel ke CSV"
+  echo "8. Keluar"
+}
+
+# Fungsi: Tambah Data Motor Unit
+input_motor() {
+  read -p "Nomor Seri: " seri
+  read -p "Model: " model
+  read -p "Tahun Produksi (YYYY): " tahun
+  read -p "Status (aktif/nonaktif): " status
+
+  # Validasi input
+  if [[ -z "$seri" || -z "$model" || ! "$tahun" =~ ^[0-9]{4}$ || ! "$status" =~ ^(aktif|nonaktif)$ ]]; then
+    echo "❌ Input tidak valid. Cek kembali data."
+    return
+  fi
+
+  sqlite3 $DB "INSERT INTO motor_unit (nomor_seri, model, tahun_produksi, status) \
+              VALUES ('$seri', '$model', $tahun, '$status');"
+  echo "✅ Data motor disimpan."
+}
+
+# Fungsi: Tambah Output Energi Panel
+input_output_panel() {
+  read -p "ID Panel: " panel_id
+  read -p "Tanggal (YYYY-MM-DD): " tgl
+  read -p "Output KWH: " kwh
+
+  if ! [[ "$panel_id" =~ ^[0-9]+$ && "$tgl" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ && "$kwh" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+    echo "❌ Input tidak valid."
+    return
+  fi
+
+  sqlite3 $DB "INSERT INTO output_energi (panel_id, tanggal, output_kwh) \
+              VALUES ($panel_id, '$tgl', $kwh);"
+  echo "✅ Output energi ditambahkan."
+}
+
+# Fungsi: Lihat Motor Unit
+lihat_motor() {
+  echo "\n--- Data Motor Unit ---"
+  sqlite3 -header -column $DB "SELECT * FROM motor_unit;"
+}
+
+# Fungsi: Cari Motor Berdasarkan Nomor Seri
+cari_motor() {
+  read -p "Masukkan Nomor Seri: " seri
+  sqlite3 -header -column $DB "SELECT * FROM motor_unit WHERE nomor_seri LIKE '%$seri%';"
+}
+
+# Fungsi: Hapus Motor Berdasarkan ID
+hapus_motor() {
+  read -p "Masukkan ID Motor yang ingin dihapus: " id
+  if ! [[ "$id" =~ ^[0-9]+$ ]]; then
+    echo "❌ ID harus angka."
+    return
+  fi
+  sqlite3 $DB "DELETE FROM motor_unit WHERE id = $id;"
+  echo "🗑️ Motor dengan ID $id dihapus (jika ada)."
+}
+
+# Fungsi: Lihat Output Hari Ini
+lihat_output_hari_ini() {
+  echo "\n--- Output Energi Hari Ini ---"
+  sqlite3 -header -column $DB "SELECT * FROM output_energi WHERE tanggal = date('now');"
+}
+
+# Fungsi: Export ke CSV semua tabel
+export_csv() {
+  mkdir -p ekspor_csv
+  for tabel in $(sqlite3 $DB ".tables"); do
+    sqlite3 -header -csv $DB "SELECT * FROM $tabel;" > "ekspor_csv/${tabel}.csv"
+    echo "✅ Exported: $tabel"
+  done
+  echo "📦 Semua tabel telah diekspor ke folder 'ekspor_csv/'"
+}
+
+# === LOOP MENU ===
+while true; do
+  menu
+  read -p "Pilih menu [1-8]: " pilih
+  case $pilih in
+    1) input_motor;;
+    2) input_output_panel;;
+    3) lihat_motor;;
+    4) cari_motor;;
+    5) hapus_motor;;
+    6) lihat_output_hari_ini;;
+    7) export_csv;;
+    8) echo "👋 Keluar."; break;;
+    *) echo "❗ Pilihan tidak valid.";;
+  esac
+done
